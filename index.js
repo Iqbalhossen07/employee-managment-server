@@ -2,6 +2,7 @@ const express = require('express')
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config()
 const jwt = require('jsonwebtoken');
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const cors = require('cors')
 const app = express()
 const port =process.env.PORT || 5000
@@ -32,10 +33,11 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
 
     const userCollection = client.db("employee_Management").collection("users");
     const paymentCollection = client.db("employee_Management").collection("payments");
+    const paymentCollection1 = client.db("employee_Management").collection("payment");
 
 
      // jwt related api
@@ -194,16 +196,88 @@ async function run() {
       });
 
 
+        // payment collection
+        // app.get('/payments', async (req, res) => {
+        //   const result = await paymentCollection.find().toArray();
+        //   res.send(result);
+        // });
+
+        app.get('/payments/:id', async (req, res) => {
+
+          // const email = req.query.email;
+          const query = { _id : new ObjectId(req.params.id)};
+          const result = await paymentCollection.findOne(query);
+          res.send(result);
+        });
+
+        // // payment1 collection payment
+        // app.get('/payment', async (req, res) => {
+          
+        //   const result = await paymentCollection1.find().toArray();
+        //   res.send(result);
+        // });
+        // payment1 collection payment
+        app.get('/payment/:id', async (req, res) => {
+          
+          const id = req.params.id
+          // const email = req.query.email;
+          // const query = {email :email};
+          const userQuery = {_id : new ObjectId(id)}
+          const user = await userCollection.findOne(userQuery)
+          console.log('hiiting 227',user)
+          // const result = await paymentCollection1.findOne(query);
+          res.send(user);
+        });
+
+         // payment intent
+        app.post('/create-payment-intent', async (req, res) => {
+          const { salary } = req.body;
+          const amount = parseInt(salary * 100);
+          console.log(amount, 'amount inside the intent')
+
+          const paymentIntent = await stripe.paymentIntents.create({
+            amount: amount,
+            currency: 'usd',
+            payment_method_types: ['card']
+          });
+
+          res.send({
+            clientSecret: paymentIntent.client_secret
+          })
+        });
+
+        app.post('/payment', async (req, res) => {
+          const id = req.params.id
+          const payment = req.body;
+          const paymentResult = await paymentCollection1.insertOne(payment);
+    
+          //  carefully delete each item from the cart
+          console.log('payment info', payment);
+          const query = {_id: new ObjectId(id)}
+    
+          const deleteResult = await paymentCollection.deleteOne(query);
+    
+          res.send({ paymentResult, deleteResult });
+        })
+
+        // payment history api create 
+
+        app.get('/payment/:email', verifyToken, async (req, res) => {
+          const query = { email: req.params.email }
+          if (req.params.email !== req.decoded.email) {
+            return res.status(403).send({ message: 'forbidden access' });
+          }
+          const result = await paymentCollection1.find(query).toArray();
+          res.send(result);
+        })
+
+
    
 
 
-
-
-
-
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    // await client.db("admin").command({ ping: 1 });
+    // console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
