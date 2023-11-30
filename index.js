@@ -295,7 +295,7 @@ async function run() {
         })
 
 
-        // // work-sheet post api create 
+        // work-sheet post api create 
 
         
 
@@ -323,7 +323,13 @@ async function run() {
           res.send(result);
         });
 
-   
+  //  hr payment history 
+        app.get('/payment', async(req,res)=>{
+          const employees = req.body;
+          const result = await paymentCollection1.find().toArray()
+          res.send(result)
+
+        })
 
 
     // Send a ping to confirm a successful connection
