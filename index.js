@@ -38,6 +38,8 @@ async function run() {
     const userCollection = client.db("employee_Management").collection("users");
     const paymentCollection = client.db("employee_Management").collection("payments");
     const paymentCollection1 = client.db("employee_Management").collection("payment");
+    const workCollection = client.db("employee_Management").collection("work");
+    const contactCollection = client.db("employee_Management").collection("contact");
 
 
      // jwt related api
@@ -73,6 +75,17 @@ async function run() {
       const user = await userCollection.findOne(query);
       const isHr = user?.role === 'hr';
       if (!isHr) {
+        return res.status(403).send({ message: 'forbidden access' });
+      }
+      next();
+    }
+    // use verify Hr after verifyToken
+    const verifyEmployee = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      const isEmployee = user?.role === 'employee';
+      if (!isEmployee) {
         return res.status(403).send({ message: 'forbidden access' });
       }
       next();
@@ -126,6 +139,22 @@ async function run() {
         admin = user?.role === 'admin';
       }
       res.send({ admin });
+    })
+     // check Employee 
+     app.get('/users/employee/:email', verifyToken, async (req, res) => {
+      const email = req.params.email;
+
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: 'forbidden access' })
+      }
+
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      let employee = false;
+      if (user) {
+        employee = user?.role === 'employee';
+      }
+      res.send({ employee });
     })
 
 
@@ -265,6 +294,34 @@ async function run() {
           res.send(result);
         })
 
+
+        // // work-sheet post api create 
+
+        
+
+        app.post('/work', async (req, res) => {
+          const user = req.body;
+          const result = await workCollection.insertOne(user);
+          res.send(result);
+        });
+
+        app.get('/work/:email', verifyToken, async (req, res) => {
+          const query = { email: req.params.email }
+          if (req.params.email !== req.decoded.email) {
+            return res.status(403).send({ message: 'forbidden access' });
+          }
+          const result = await workCollection.find(query).toArray();
+          res.send(result);
+        })
+
+
+        // contact api create 
+
+        app.post('/contact', async (req, res) => {
+          const user = req.body;
+          const result = await contactCollection.insertOne(user);
+          res.send(result);
+        });
 
    
 
