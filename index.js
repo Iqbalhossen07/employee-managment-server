@@ -210,13 +210,7 @@ async function run() {
           res.send(result);
         });
 
-        // // payment1 collection payment
-        // app.get('/payment', async (req, res) => {
-          
-        //   const result = await paymentCollection1.find().toArray();
-        //   res.send(result);
-        // });
-        // payment1 collection payment
+        
         app.get('/payment/:id', async (req, res) => {
           
           const id = req.params.id
